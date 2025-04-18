@@ -7,16 +7,16 @@ const app = express();
 const port = 3000;
 
 // === Configuración del bot de Discord ===
-const DISCORD_TOKEN = "TU_TOKEN_DEL_BOT";
-const CLIENT_ID = "TU_CLIENT_ID_DEL_BOT";
+const DISCORD_TOKEN = "MTM2Mjg4OTk0NzQxNzQxNTcxMA.GTA_Cl.VIuUrifNRviHHg0ctEHaQRs-kdBDlmYSYdfrnI";
+const CLIENT_ID = "1362889947417415710";
 
 // === Configuración de Google Sheets ===
-const SHEET_ID = "ID_DE_TU_HOJA";
+const SHEET_ID = "1Er1IrzSalxWYSScgzwcrJNA6ZPknyXK9yNowN4zBUnY";
 const SHEET_RANGE = "A2:A";
 
 // === Autenticación con Google Sheets ===
 const auth = new google.auth.GoogleAuth({
-  keyFile: "credentials.json",
+  keyFile: "google-credentials.json",
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 const sheets = google.sheets({ version: "v4", auth });
@@ -54,7 +54,17 @@ client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "whitelist") {
+    // ✅ Solo se permite en el canal autorizado
+    if (interaction.channelId !== "1362897314917646487") { // Asegúrate de usar la ID como cadena de texto
+      await interaction.reply({
+        content: "❌ Este comando solo puede usarse en el canal autorizado.",
+        ephemeral: true
+      });
+      return;
+    }
+
     const username = interaction.options.getString("username");
+
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
@@ -64,6 +74,7 @@ client.on("interactionCreate", async interaction => {
           values: [[username]],
         },
       });
+
       await interaction.reply(`✅ ${username} ha sido agregado a la whitelist.`);
     } catch (error) {
       console.error("Error al agregar a la whitelist:", error);
@@ -71,6 +82,7 @@ client.on("interactionCreate", async interaction => {
     }
   }
 });
+
 
 client.login(DISCORD_TOKEN);
 
@@ -93,4 +105,29 @@ app.get("/whitelist", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`🌐 API activa en http://localhost:${port}`);
+});
+
+// === API para Roblox (verificación de whitelist) ===
+app.get("/whitelist", async (req, res) => {
+  const username = (req.query.username || "").trim(); // Nombre de usuario de Roblox
+  if (!username) {
+    return res.status(400).json({ error: "Debe proporcionar un nombre de usuario." });
+  }
+
+  try {
+    // Obtener los usuarios desde la hoja de cálculo
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: "A2:A",  // Rango de las celdas que contienen los nombres de usuario
+    });
+
+    const values = response.data.values || [];
+    const isWhitelisted = values.flat().includes(username); // Verifica si el nombre está en la whitelist
+
+    // Responde con el resultado
+    res.json({ whitelisted: isWhitelisted });
+  } catch (error) {
+    console.error("Error al consultar la whitelist:", error);
+    res.status(500).json({ error: "Error al consultar la whitelist." });
+  }
 });
