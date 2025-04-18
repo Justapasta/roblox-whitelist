@@ -7,7 +7,8 @@ const app = express();
 const port = 3000;
 
 // === Configuración del bot de Discord ===
-const DISCORD_TOKEN = "MTM2Mjg4OTk0NzQxNzQxNTcxMA.GTA_Cl.VIuUrifNRviHHg0ctEHaQRs-kdBDlmYSYdfrnI";
+require("dotenv").config();
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = "1362889947417415710";
 
 // === Configuración de Google Sheets ===
